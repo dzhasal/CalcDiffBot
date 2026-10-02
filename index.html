@@ -25,7 +25,6 @@
   /* Дисплей */
   .display { flex: 1; width: 100%; max-width: 420px; display: flex; flex-direction: column; justify-content: flex-end;
     padding: 8px 6px 14px; min-height: 0; }
-  .formula { color: var(--grey); font-size: 14px; margin-bottom: auto; padding-top: 14px; }
   .line { display: flex; align-items: baseline; justify-content: flex-end; gap: 8px; cursor: pointer; min-height: 1.15em; }
   .num { font-weight: 300; line-height: 1.1; white-space: nowrap; letter-spacing: -1px; transition: color .15s; }
   .line[data-i], .line.result { justify-content: space-between; }
@@ -63,8 +62,6 @@
 <body>
 
 <div class="display">
-  <div class="formula">(второе ÷ первое − 1) × 100</div>
-
   <div class="line active empty" id="l0" data-i="0">
     <span class="num" id="n0">0</span><span class="unit">первое</span>
   </div>
