@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Разница в процентах</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --black: #000;
+    --digit: #333333;
+    --func: #616161;
+    --orange: #f19a38;
+    --white: #fff;
+    --grey: #8e8e93;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
+  html, body { height: 100%; margin: 0; background: var(--black); color: var(--white);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Roboto, Arial, sans-serif;
+    overscroll-behavior: none; }
+  body { display: flex; flex-direction: column; align-items: center;
+    padding: 0 16px calc(12px + env(safe-area-inset-bottom, 0px)); height: 100dvh; overflow: hidden; }
+
+  /* Дисплей */
+  .display { flex: 1; width: 100%; max-width: 420px; display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 8px 6px 14px; min-height: 0; }
+  .formula { color: var(--grey); font-size: 14px; margin-bottom: auto; padding-top: 14px; }
+  .line { display: flex; align-items: baseline; justify-content: flex-end; gap: 8px; cursor: pointer; min-height: 1.15em; }
+  .num { font-weight: 300; line-height: 1.1; white-space: nowrap; letter-spacing: -1px; transition: color .15s; }
+  .line[data-i], .line.result { justify-content: space-between; }
+  .line[data-i] .unit, .line.result .unit { text-align: right; }
+  .unit { font-size: 22px; color: var(--grey); font-weight: 400; min-width: 64px; text-align: left; }
+  .line.inactive .num { color: var(--grey); }
+  .line.empty .num { color: #5a5a5e; }
+  .line.active.empty .num { color: var(--white); }
+  .divider { height: 1px; background: #2c2c2e; margin: 8px 0 8px 40px; }
+  .sep-row { display: flex; align-items: center; }
+  .sep-row .divider { flex: 1; margin: 8px 0 8px 12px; }
+  .result .num { color: var(--white); }
+  .result.placeholder .num { color: #5a5a5e; }
+  .result.error .num { font-size: 24px !important; color: #ff7a6b; letter-spacing: 0; font-weight: 400; }
+  .hint { height: 16px; font-size: 13px; color: var(--grey); text-align: left; margin-top: 2px; }
+
+  /* Клавиатура */
+  .pad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    width: min(100%, 420px, calc(0.8 * (100dvh - 280px))); flex: none; }
+  .pad button { appearance: none; border: 0; border-radius: 999px; aspect-ratio: 1; width: 100%;
+    font-family: inherit; font-size: clamp(26px, 8.5vw, 38px); font-weight: 400; color: var(--white);
+    background: var(--digit); display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: filter .08s, transform .08s; padding: 0; }
+  .pad button:active { filter: brightness(1.55); transform: scale(.97); }
+  .pad .f { background: var(--func); }
+  .pad .o { background: var(--orange); }
+  .pad .o:active { filter: brightness(1.2); }
+  .pad .zero { grid-column: span 2; aspect-ratio: auto; justify-content: flex-start; padding-left: 8.5%; }
+  .pad .eq { grid-row: span 3; aspect-ratio: auto; }
+  .pad svg { width: 38%; height: 38%; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .pad button:focus-visible { outline: 2px solid var(--white); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .pad button, .num { transition: none; } }
+</style>
+</head>
+<body>
+
+<div class="display">
+  <div class="formula">(второе ÷ первое − 1) × 100</div>
+
+  <div class="line active empty" id="l0" data-i="0">
+    <span class="num" id="n0">0</span><span class="unit">первое</span>
+  </div>
+  <div class="line inactive empty" id="l1" data-i="1" style="margin-top:4px">
+    <span class="num" id="n1">0</span><span class="unit">второе</span>
+  </div>
+
+  <div class="sep-row"><div class="divider"></div></div>
+
+  <div class="line result placeholder" id="res">
+    <span class="num" id="nr">0</span><span class="unit">%</span>
+  </div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<div class="pad">
+  <button class="f" id="ac" aria-label="Очистить всё">AC</button>
+  <button class="f" id="bk" aria-label="Удалить символ">
+    <svg viewBox="0 0 24 24"><path d="M9 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg>
+  </button>
+  <button class="f" id="pm" aria-label="Сменить знак">
+    <svg viewBox="0 0 24 24"><path d="M6 6v6M3 9h6M14 7l-4 12M14 17h6"/></svg>
+  </button>
+  <button class="o" id="sw" aria-label="Поменять числа местами">
+    <svg viewBox="0 0 24 24"><path d="M8 20V5M4.5 8.5L8 5l3.5 3.5M16 4v15M12.5 15.5L16 19l3.5-3.5"/></svg>
+  </button>
+
+  <button data-d="7">7</button><button data-d="8">8</button><button data-d="9">9</button>
+  <button class="o" id="nx" aria-label="Следующее число">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+  </button>
+
+  <button data-d="4">4</button><button data-d="5">5</button><button data-d="6">6</button>
+  <button class="o eq" id="eq" aria-label="Рассчитать">
+    <svg viewBox="0 0 24 24" style="width:30%;height:30%"><path d="M5 9h14M5 15h14"/></svg>
+  </button>
+
+  <button data-d="1">1</button><button data-d="2">2</button><button data-d="3">3</button>
+
+  <button class="zero" data-d="0">0</button>
+  <button id="dot" aria-label="Запятая">,</button>
+</div>
+
+<script>
+(function () {
+  var tg = window.Telegram && window.Telegram.WebApp;
+  try {
+    if (tg) {
+      tg.ready(); tg.expand();
+      tg.setHeaderColor && tg.setHeaderColor('#000000');
+      tg.setBackgroundColor && tg.setBackgroundColor('#000000');
+      tg.setBottomBarColor && tg.setBottomBarColor('#000000');
+      tg.disableVerticalSwipes && tg.disableVerticalSwipes();
+    }
+  } catch (e) {}
+
+  var $ = function (id) { return document.getElementById(id); };
+  var v = ['', ''];          // строки, как набирает пользователь (точка как разделитель)
+  var active = 0;
+  var result = null;         // {text} | {error}
+  var NBSP = '\u00a0';
+
+  function tap(kind) {
+    try {
+      if (!tg || !tg.HapticFeedback) return;
+      if (kind === 'ok') tg.HapticFeedback.notificationOccurred('success');
+      else if (kind === 'err') tg.HapticFeedback.notificationOccurred('error');
+      else tg.HapticFeedback.impactOccurred('light');
+    } catch (e) {}
+  }
+
+  function group(s) {
+    if (s === '') return '0';
+    var neg = s[0] === '-', body = neg ? s.slice(1) : s;
+    if (body === '') return '-';
+    var parts = body.split('.');
+    var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
+    return (neg ? '-' : '') + intPart + (parts.length > 1 ? ',' + parts[1] : '');
+  }
+
+  function fit(el, text, base) {
+    var n = text.length, size = base;
+    if (n > 7)  size = base * 0.88;
+    if (n > 9)  size = base * 0.74;
+    if (n > 11) size = base * 0.62;
+    if (n > 14) size = base * 0.52;
+    el.style.fontSize = Math.round(size) + 'px';
+  }
+
+  function render() {
+    for (var i = 0; i < 2; i++) {
+      var line = $('l' + i), num = $('n' + i), t = group(v[i]);
+      num.textContent = t;
+      fit(num, t, 56);
+      line.classList.toggle('active', i === active);
+      line.classList.toggle('inactive', i !== active);
+      line.classList.toggle('empty', v[i] === '');
+    }
+    var res = $('res'), nr = $('nr');
+    res.classList.remove('placeholder', 'error');
+    if (result === null) {
+      res.classList.add('placeholder'); nr.textContent = '0'; fit(nr, '0', 64);
+    } else if (result.error) {
+      res.classList.add('error'); nr.textContent = result.error; nr.style.fontSize = '';
+    } else {
+      nr.textContent = result.text; fit(nr, result.text, 64);
+    }
+  }
+
+  function edit(fn) { fn(); result = null; $('hint').textContent = ''; render(); }
+
+  function digitsCount(s) { return s.replace(/[^0-9]/g, '').length; }
+
+  function addDigit(d) {
+    edit(function () {
+      var s = v[active];
+      if (digitsCount(s) >= 15) return;
+      if (s === '0') s = d;
+      else if (s === '-0') s = '-' + d;
+      else s += d;
+      v[active] = s;
+    });
+  }
+  function addDot() {
+    edit(function () {
+      var s = v[active];
+      if (s.indexOf('.') !== -1) return;
+      v[active] = (s === '' || s === '-') ? s + '0.' : s + '.';
+    });
+  }
+  function back() {
+    edit(function () {
+      var s = v[active].slice(0, -1);
+      v[active] = (s === '-') ? '' : s;
+    });
+  }
+  function clearAll() { edit(function () { v = ['', '']; active = 0; }); }
+  function sign() {
+    edit(function () {
+      var s = v[active];
+      v[active] = s[0] === '-' ? s.slice(1) : '-' + s;
+    });
+  }
+  function swap() { edit(function () { v = [v[1], v[0]]; }); }
+  function next() { active = active ^ 1; result = null; render(); }
+
+  function toNum(s) {
+    if (s === '' || s === '-') return NaN;
+    if (s[s.length - 1] === '.') s = s.slice(0, -1);
+    return parseFloat(s);
+  }
+
+  function calc() {
+    var b = toNum(v[0]), a = toNum(v[1]);
+    if (isNaN(b) || isNaN(a)) { result = { error: 'Введите оба числа' }; tap('err'); render(); return; }
+    if (b === 0) { result = { error: 'Первое число не может быть 0' }; tap('err'); render(); return; }
+    var pct = (a / b - 1) * 100;
+    var r = Math.round(pct * 1e6) / 1e6;
+    if (r === 0) r = 0; // убрать -0
+    var text = r.toLocaleString('ru-RU', { maximumFractionDigits: 6 }).replace(/\s/g, NBSP);
+    result = { text: text };
+    $('hint').textContent = 'Нажмите на результат, чтобы скопировать';
+    tap('ok');
+    render();
+  }
+
+  function copyResult() {
+    if (!result || result.error) return;
+    var t = result.text.replace(/\u00a0/g, '') + '%';
+    function done() { $('hint').textContent = 'Скопировано'; setTimeout(function () { if (result && !result.error) $('hint').textContent = 'Нажмите на результат, чтобы скопировать'; }, 1500); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).then(done, done);
+    } else {
+      var ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta);
+      ta.select(); try { document.execCommand('copy'); } catch (e) {} document.body.removeChild(ta); done();
+    }
+  }
+
+  // События
+  document.querySelectorAll('[data-d]').forEach(function (b) {
+    b.addEventListener('click', function () { tap(); addDigit(b.getAttribute('data-d')); });
+  });
+  $('dot').addEventListener('click', function () { tap(); addDot(); });
+  $('bk').addEventListener('click', function () { tap(); back(); });
+  $('ac').addEventListener('click', function () { tap(); clearAll(); });
+  $('pm').addEventListener('click', function () { tap(); sign(); });
+  $('sw').addEventListener('click', function () { tap(); swap(); });
+  $('nx').addEventListener('click', function () { tap(); next(); });
+  $('eq').addEventListener('click', calc);
+  $('res').addEventListener('click', copyResult);
+  document.querySelectorAll('.line[data-i]').forEach(function (l) {
+    l.addEventListener('click', function () { active = +l.getAttribute('data-i'); result = null; render(); tap(); });
+  });
+
+  // Клавиатура на десктопе
+  document.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key;
+    if (/^[0-9]$/.test(k)) addDigit(k);
+    else if (k === ',' || k === '.') addDot();
+    else if (k === 'Backspace') back();
+    else if (k === 'Escape') clearAll();
+    else if (k === 'Enter' || k === '=') calc();
+    else if (k === 'Tab') { e.preventDefault(); next(); }
+    else if (k === '-') sign();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
