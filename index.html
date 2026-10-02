@@ -63,10 +63,10 @@
 
 <div class="display">
   <div class="line active empty" id="l0" data-i="0">
-    <span class="num" id="n0">0</span><span class="unit">первое</span>
+    <span class="num" id="n0">0</span><span class="unit">меньшее</span>
   </div>
   <div class="line inactive empty" id="l1" data-i="1" style="margin-top:4px">
-    <span class="num" id="n1">0</span><span class="unit">второе</span>
+    <span class="num" id="n1">0</span><span class="unit">большее</span>
   </div>
 
   <div class="sep-row"><div class="divider"></div></div>
@@ -217,7 +217,7 @@
   function calc() {
     var b = toNum(v[0]), a = toNum(v[1]);
     if (isNaN(b) || isNaN(a)) { result = { error: 'Введите оба числа' }; tap('err'); render(); return; }
-    if (b === 0) { result = { error: 'Первое число не может быть 0' }; tap('err'); render(); return; }
+    if (b === 0) { result = { error: 'Меньшее число не может быть 0' }; tap('err'); render(); return; }
     var pct = (a / b - 1) * 100;
     var r = Math.round(pct * 1e6) / 1e6;
     if (r === 0) r = 0; // убрать -0
